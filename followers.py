@@ -2,7 +2,7 @@
 from random import randint
 import random
 import time
-import psycopg2
+
 import config
 
 

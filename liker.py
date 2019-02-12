@@ -52,46 +52,6 @@ def onlogin_callback(api, new_settings_file):
         json.dump(cache_settings, outfile, default=to_json)
         print('SAVED: {0!s}'.format(new_settings_file))
 
-def gen_mas_for_likes(mas_likes):
-    #в массиве followings будут попадать те, кого пользователь еще не лайкал
-    #сверка проводится с массивом пролайканых постов
-    #так же в массив попадут те, кому лайк был поставлен
-    #позднее параметра TIME_LAST_ACTIVITY_LIKE
-
-    followings = []
-    peoples_for_likes = 0
-    for follower in users_following:
-        rand_user = random.choice(users_following)
-        i=0
-        buffer_likes = []
-        for like in mas_likes:
-            if rand_user['pk'] == like['pk']:
-                #print(str(like['pk']) + '-------' + str(like['taken_at']))
-                buffer_likes.append(like['taken_at'])
-                i += 1
-        if i == 0:
-            followings.append({'pk' : rand_user['pk'],
-                               'username' : rand_user['username'],
-                               'following' : '',})
-        else:
-            #сортируем массив по возрастанию дат
-            maxdate_ar = sorted(buffer_likes)
-            cur_time = int(time.time())
-            res_time = cur_time - maxdate_ar[len(maxdate_ar)-1]
-            if config.TIME_LAST_ACTIVITY_LIKE < res_time:
-                followings.append({'pk' : rand_user['pk'],
-                                   'username' : rand_user['username'],
-                                   'following' : '',})
-
-    #как только массив заполняется, набор прекращаем
-    #количество подписчиков хранится в переменной MAX_USERS_LIKE
-        if len(followings) == config.MAX_USERS_LIKE:
-            break
-
-    return(followings)
-
-
-
 def get_auth_data(id_user):
 
     conn = psycopg2.connect(dbname='grammer', user='insta',
@@ -176,14 +136,7 @@ if __name__ == '__main__':
     print('Добро пожаловать, ' + instalogin)
     print()
 
-
-
-
 #####################Лайкинг####################################
-
-
-
-
 
     #получаем свой идентификатор и токен
     my_id = api.authenticated_user_id
@@ -200,13 +153,9 @@ if __name__ == '__main__':
     count_like_posts = randint(config.START_COUNT_POSTS, config.FINISH_COUNT_POSTS)
     print('Будет пролайкано: ' + str(count_like_posts) + ' постов')
 
-
-
-
     conn = psycopg2.connect(dbname='grammer', user='insta',
                         password='123456789', host='localhost')
     cursor = conn.cursor()
-
 
     #счетчик подписок
     ss = 1
@@ -214,7 +163,6 @@ if __name__ == '__main__':
     sf = 1
     #сквозной счет поставленных лайков, их количество должно быть меньше ограничения
     sl = 1
-
     #идем по каждой подписке
     for user in users_following:
         pk = user['pk']
@@ -231,8 +179,6 @@ if __name__ == '__main__':
                                 VALUES (%(login)s, %(pk)s, %(username)s, %(id_like)s, %(code)s, %(taken_at)s)""", like_posts)
                 conn.commit()
                 exit(1)
-
-
 
             id_post = feed['id']
             #получаем самую большую(т.е. самую ближайшую к текушей) дату лайка
@@ -263,9 +209,13 @@ if __name__ == '__main__':
                                    'taken_at' : feed['taken_at']})
                 #ведем счет лайкам
                 sl += 1
+
+                tl = randint(config.START_SLEEP_TIME_LIKE, config.FINISH_SLEEP_TIME_LIKE)
+                print('До следующего лайка ' + str(tl) + ' сек')
+                time.sleep(tl)
             #пересчет всех новостей пользователя
-            if sf == 3:
-                break
+            #if sf == 3:
+            #    break
             sf += 1
 
         #после того как пользователя отработали то производим запись ланных по лайкам в базу
@@ -274,72 +224,10 @@ if __name__ == '__main__':
                         VALUES (%(login)s, %(pk)s, %(username)s, %(id_like)s, %(code)s, %(taken_at)s)""", like_posts)
         conn.commit()
 
-
-
-
-
-
         #пересчет всех пользователей
-        if ss == 1:
-            break
+        #if ss == 1:
+        #    break
         ss += 1
-
-    cursor.close()
-    conn.close()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-'''
-
-    #генерация массива юзеров для постановки лайков
-    users_for_likes = gen_mas_for_likes(mas_likes)
-
-    for user in users_for_likes:
-        pk = user['pk']
-        username = user['username']
-        data_follow = api.friendships_show(pk)
-        print('Пользователь: ' + username)
-        print('Ссылка на профиль: https://www.instagram.com/' + username)
-
-        count_like_posts = randint(config.START_COUNT_POSTS, config.FINISH_COUNT_POSTS)
-        print('Будет пролайкано: ' + str(count_like_posts) + ' постов')
-
-        feed_user = api.user_feed(pk)
-
-        schet_likes = 1
-        #идем по ленте, чтобы лайкать посты
-        mas_likes = []
-        for feed in feed_user['items']:
-            id_media = feed['id']
-            print('Пролайканый пост : https://www.instagram.com/p/' + feed['code'])
-
-            cur_time_like = int(time.time())
-            like = api.post_like(id_media)
-            if like['status'] == 'ok':
-                mas_likes.append([pk, username, id_media, feed['code'], cur_time_like])
-
-            if schet_likes == count_like_posts:
-                break
-            schet_likes += 1
-            #рандомное количество сна между лайками
-            tl = randint(config.START_SLEEP_TIME_LIKE, config.FINISH_SLEEP_TIME_LIKE)
-            print('До следующего лайка ' + str(tl) + ' сек')
-            time.sleep(tl)
-
 
         #рандомное количество сна между подписчиками
         t = randint(config.START_SLEEP_TIME_FOLLOWER, config.FINISH_SLEEP_TIME_FOLLOWER)
@@ -348,31 +236,5 @@ if __name__ == '__main__':
 
         time.sleep(t)
 
-
-
-'''
-
-
-
-
-
-
-
-
-
-        #Поля таблицы статистики лайков
-        #
-        #логин аккаунта для которого делаются лайки
-        #идентификатор
-        #ид аккаунта
-        #имя пользователя
-        #ид поста
-        #ссылка на пост
-        #время поста
-        #
-        ############
-        #Поля таблицы статистики запусков скриптов
-        #ид
-        #тип скрипта(mas_like, mas_follow, и пр.)
-        #время запуска скрипта
-        #######################
+    cursor.close()
+    conn.close()
