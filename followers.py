@@ -2,7 +2,7 @@
 from random import randint
 import random
 import time
-import sqlite3
+import psycopg2
 import config
 
 
@@ -56,8 +56,33 @@ def get_followers(my_id, rank_tok):
     return users_followers
 
 
+def get_auth_data(id_user):
+
+    conn = psycopg2.connect(dbname='grammer', user='insta',
+                        password='123456789', host='localhost')
+    cursor = conn.cursor()
+    cursor.execute('SELECT login_acc, passwd_acc FROM inst_acc WHERE id = %s', (id_user, ))
+    u = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    cnt = len(u)
+    if u == None:
+        return False
+    else:
+        return ({'login' : u[0], 'passwd' : u[1], 'cookie': u[0]+'.json'})
+
+
 
 if __name__ == '__main__':
+
+    #id - 1   kabluchki_shop
+    #id - 2   Selentaori.art
+    #id - 3   kava_cafe_od
+    id = '1'
+    data_auth = get_auth_data(id)
+    instalogin = data_auth['login']
+    instapwd = data_auth['passwd']
+    instacookie = data_auth['cookie']
 
     logging.basicConfig()
     logger = logging.getLogger('instagram_private_api')
@@ -65,14 +90,14 @@ if __name__ == '__main__':
     print('Версия клиента: {0!s}'.format(client_version))
     device_id = None
     try:
-        settings_file = config.COOKIE_FILE
+        settings_file = instacookie
         if not os.path.isfile(settings_file):
             # settings file does not exist
             print('Невозможно найти файл: {0!s}'.format(settings_file))
             # login new
             api = Client(
-                config.INSTAGRAM_LOGIN, config.INSTAGRAM_PASSWORD,
-                on_login=lambda x: onlogin_callback(x, config.COOKIE_FILE))
+                instalogin, instapwd,
+                on_login=lambda x: onlogin_callback(x, instacookie))
         else:
             with open(settings_file) as file_data:
                 cached_settings = json.load(file_data, object_hook=from_json)
@@ -80,7 +105,7 @@ if __name__ == '__main__':
             device_id = cached_settings.get('device_id')
             # reuse auth settings
             api = Client(
-                config.INSTAGRAM_LOGIN, config.INSTAGRAM_PASSWORD,
+                instalogin, instapwd,
                 settings=cached_settings)
 
     except (ClientCookieExpiredError, ClientLoginRequiredError) as e:
@@ -89,9 +114,9 @@ if __name__ == '__main__':
             # Login expired
             # Do relogin but use default ua, keys and such
         api = Client(
-            config.INSTAGRAM_LOGIN, config.INSTAGRAM_PASSWORD,
+            instalogin, instapwd,
             device_id=device_id,
-            on_login=lambda x: onlogin_callback(x, config.COOKIE_FILE))
+            on_login=lambda x: onlogin_callback(x, instacookie))
 
     except ClientLoginError as e:
         print('ClientLoginError {0!s}'.format(e))
@@ -108,7 +133,7 @@ if __name__ == '__main__':
         # Show when login expires
     cookie_expiry = api.cookie_jar.auth_expires
     print('Срок действия cookie: {0!s}'.format(datetime.datetime.fromtimestamp(cookie_expiry).strftime('%Y-%m-%dT%H:%M:%SZ')))
-    print('Добро пожаловать, ' + config.INSTAGRAM_LOGIN)
+    print('Добро пожаловать, ' + instalogin)
     print()
 
 
