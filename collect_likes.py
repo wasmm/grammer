@@ -143,6 +143,10 @@ if __name__ == '__main__':
 
     print()
 
+    conn = psycopg2.connect(dbname='grammer', user='insta',
+                        password='123456789', host='localhost')
+    cursor = conn.cursor()
+
     liked_feed = api.feed_liked()
     mid = liked_feed['next_max_id']
     print('максимальный ID: ' + str(mid))
@@ -150,9 +154,7 @@ if __name__ == '__main__':
     ss = 1#сквозной счетчик
     sp = 0#Счетчик постов
     while mid:
-        conn = psycopg2.connect(dbname='grammer', user='insta',
-                            password='123456789', host='localhost')
-        cursor = conn.cursor()
+
         try:
             print()
             print('Проход #' + str(ss))
@@ -189,6 +191,7 @@ if __name__ == '__main__':
             mid = liked_feed['next_max_id']
             tt = randint(30, 40)
             time.sleep(tt)
+
         except KeyError:
             result = True
             print('Сбор лайков завершен успешно')
@@ -205,7 +208,8 @@ if __name__ == '__main__':
                 print('Обновляем данные в stat, ид пользователя, под которым работаем: '+ str(id))
                 cursor.execute("""UPDATE stat SET inst_likes = %s WHERE account = %s """, (result, id))
                 conn.commit()
-
+            cursor.close()
+            conn.close()
             break
         except ConnectionResetError:
             result = False
@@ -223,12 +227,14 @@ if __name__ == '__main__':
                 print('Обновляем данные в stat, ид пользователя, под которым работаем: '+ str(id))
                 cursor.execute("""UPDATE stat SET inst_likes = %s WHERE account = %s """, (result, id))
                 conn.commit()
+            cursor.close()
+            conn.close()
 
-        conn.commit()
-        cursor.close()
-        conn.close()
-        print('Сбор лайков завершен')
+        #conn.commit()
         ss += 1
+    cursor.close()
+    conn.close()
+    print('Сбор лайков завершен')
 
 
 
