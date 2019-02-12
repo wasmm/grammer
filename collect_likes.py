@@ -73,7 +73,7 @@ if __name__ == '__main__':
     #id - 1   kabluchki_shop
     #id - 2   Selentaori.art
     #id - 3   kava_cafe_od
-    id = '1'
+    id = '2'
     data_auth = get_auth_data(id)
 
     if data_auth == False:
@@ -164,8 +164,9 @@ if __name__ == '__main__':
             for like in liked_feed['items']:
                 sp += 1
                 print('Пост #' + str(sp))
-                cursor.execute('SELECT id FROM likes WHERE id_account = %s AND id_post = %s', (str(like['user']['pk']), str(like['id'])))
+                cursor.execute('SELECT id FROM likes WHERE account = %s AND id_account = %s AND id_post = %s', (id, str(like['user']['pk']), str(like['id'])))
                 u = cursor.fetchone()
+                #cursor.close()
                 #если запись не найдена то она будет добавлена
                 if u == None:
                     print('------Пост будет добавлен, ид пользователя, под которым работаем: '+ str(id))
@@ -198,18 +199,21 @@ if __name__ == '__main__':
 
             cursor.execute('SELECT id FROM stat WHERE account = %s', (id))
             line = cursor.fetchone()
+            #cursor.close()
 
             if line == None:
                 print('Добавляем данные в stat, ид пользователя, под которым работаем: '+ str(id))
                 cursor.execute("""INSERT INTO stat(account, inst_likes, max_id, t_likes, t_followers)
                      VALUES (%s, %s, %s, %s, %s)""", (int(id), result, mid, 0, 0))
                 conn.commit()
+                #cursor.close()
             else:
                 print('Обновляем данные в stat, ид пользователя, под которым работаем: '+ str(id))
                 cursor.execute("""UPDATE stat SET inst_likes = %s WHERE account = %s """, (result, id))
                 conn.commit()
-            cursor.close()
-            conn.close()
+                #cursor.close()
+
+            #conn.close()
             break
         except ConnectionResetError:
             result = False
@@ -217,18 +221,21 @@ if __name__ == '__main__':
 
             cursor.execute('SELECT id FROM stat WHERE account = %s', (id))
             line = cursor.fetchone()
+            #cursor.close()
 
             if line == None:
                 print('Добавляем данные в stat, ид пользователя, под которым работаем: '+ str(id))
                 cursor.execute("""INSERT INTO stat(account, inst_likes, max_id, t_likes, t_followers)
                      VALUES (%s, %s, %s, %s, %s)""", (id, result, mid, 0, 0))
                 conn.commit()
+                #cursor.close()
             else:
                 print('Обновляем данные в stat, ид пользователя, под которым работаем: '+ str(id))
                 cursor.execute("""UPDATE stat SET inst_likes = %s WHERE account = %s """, (result, id))
                 conn.commit()
-            cursor.close()
-            conn.close()
+                #cursor.close()
+
+            #conn.close()
 
         #conn.commit()
         ss += 1

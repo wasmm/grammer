@@ -200,7 +200,7 @@ if __name__ == '__main__':
 
 
                 print('Этого пользователя будем лайкать')
-                #like = api.post_like(id_media)
+                like = api.post_like(id_media)
                 like_posts.append({'login' : id,
                                    'pk' : user['pk'],
                                    'username' : user['username'],
