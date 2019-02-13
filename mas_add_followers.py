@@ -158,7 +158,8 @@ if __name__ == '__main__':
     my_followers = api.user_followers(my_id, rank_tok)
     my_following = my_followers['users']
 
-    target_list = ['casual_rare_stuff', 'bulvar_shop21']
+    #target_list = ['casual_rare_stuff', 'bulvar_shop21']
+    target_list = ['mollbrandbeauty','m0da.luxe','men_shop_maxi']
 
 
 
@@ -271,3 +272,7 @@ if __name__ == '__main__':
                     print('\t\tЖди ' + str(t) + ' сек')
                     time.sleep(t)
                     continue
+
+
+
+                #13.02.2019 13:49 kabluchki_shop 189 подписчиков  Подписки: 1 552
