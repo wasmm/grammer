@@ -73,7 +73,7 @@ if __name__ == '__main__':
     #id - 1   kabluchki_shop
     #id - 2   Selentaori.art
     #id - 3   kava_cafe_od
-    id = '1'
+    id = '2'
     data_auth = get_auth_data(id)
 
     if data_auth == False:
@@ -150,8 +150,7 @@ if __name__ == '__main__':
     print('Количество подписок: ' +str(cnt_following))
 
     #рандомно определяем количество постов, которое будет пролайкано
-    count_like_posts = randint(config.START_COUNT_POSTS, config.FINISH_COUNT_POSTS)
-    print('Будет пролайкано: ' + str(count_like_posts) + ' постов')
+
 
     conn = psycopg2.connect(dbname='grammer', user='insta',
                         password='123456789', host='localhost')
@@ -159,12 +158,16 @@ if __name__ == '__main__':
 
     #счетчик подписок
     ss = 1
-    #счетчик новостей
-    sf = 1
+
     #сквозной счет поставленных лайков, их количество должно быть меньше ограничения
     sl = 1
     #идем по каждой подписке
     for user in users_following:
+        #счетчик постов
+        sf = 1
+        print('Пользователь: ' + user['username'])
+        count_like_posts = randint(config.START_COUNT_POSTS, config.FINISH_COUNT_POSTS)
+        print('Будет пролайкано: ' + str(count_like_posts) + ' постов')
         pk = user['pk']
         #получаем список ленту пользователя
         feed_user = api.user_feed(pk)
@@ -183,24 +186,18 @@ if __name__ == '__main__':
             id_post = feed['id']
             #получаем самую большую(т.е. самую ближайшую к текушей) дату лайка
             cursor.execute("""SELECT MAX(time_stamp) FROM public.likes WHERE account = %s AND id_account = %s""", (id, str(pk)))
+
+
             res_last_date = cursor.fetchone()
-            last_date = int(res_last_date[0])
-            #текущая дата
-            cur_time = int(time.time())
-
-            #в результате получаем разницу в секундах,
-            #если разница меньше ограничения значит пропускаем этого пользюка
-            #если разница больше то ставим ему лайк
-            res_time = cur_time - last_date
-            print('Последняя активность на странице пользователя была ' + str(res_time) + ' секунд назад( ~' + str(res_time // 86400) + 'дней )')
-            if res_time < config.TIME_LAST_ACTIVITY_LIKE:
-                print('Прошло мало времени, этого пользователя полайкаем позже')
-                continue
-            else:
 
 
-                print('Этого пользователя будем лайкать')
-                like = api.post_like(id_media)
+
+            if res_last_date[0] == None:
+                print('\tЭтого пользователя еще не лайкали, сейчас лайкнем')
+                print('\t\tПост #' + str(sf))
+                print('\t\tИД поста:' + str(id_post))
+                print('\t\tссылка на пост: https://www.instagram.com/p/' + feed['code'])
+                like = api.post_like(id_post)
                 like_posts.append({'login' : id,
                                    'pk' : user['pk'],
                                    'username' : user['username'],
@@ -211,30 +208,60 @@ if __name__ == '__main__':
                 sl += 1
 
                 tl = randint(config.START_SLEEP_TIME_LIKE, config.FINISH_SLEEP_TIME_LIKE)
-                print('До следующего лайка ' + str(tl) + ' сек')
+                print('\t\tДо следующего лайка ' + str(tl) + ' сек')
                 time.sleep(tl)
-            #пересчет всех новостей пользователя
-            #if sf == 3:
-            #    break
-            sf += 1
 
+
+            else:
+                last_date = int(res_last_date[0])
+                #текущая дата
+                cur_time = int(time.time())
+
+                #в результате получаем разницу в секундах,
+                #если разница меньше ограничения значит пропускаем этого пользюка
+                #если разница больше то ставим ему лайк
+                res_time = cur_time - last_date
+                #print('Последняя активность на странице пользователя была ' + str(res_time) + ' секунд назад( ~' + str(res_time // 86400) + 'дней )')
+                if res_time < config.TIME_LAST_ACTIVITY_LIKE:
+                    print('\tПрошло мало времени, этого пользователя полайкаем позже')
+                    continue
+                else:
+                    print('\tЭтого пользователя будем лайкать')
+                    print('\t\tПост #' + str(sf))
+                    print('\t\tИД поста:' + str(id_post))
+                    print('\t\tссылка на пост: https://www.instagram.com/p/' + feed['code'])
+                    like = api.post_like(id_post)
+                    like_posts.append({'login' : id,
+                                       'pk' : user['pk'],
+                                       'username' : user['username'],
+                                       'id_like' : id_post,
+                                       'code' : feed['code'],
+                                       'taken_at' : feed['taken_at']})
+                    #ведем счет лайкам
+                    sl += 1
+
+                    tl = randint(config.START_SLEEP_TIME_LIKE, config.FINISH_SLEEP_TIME_LIKE)
+                    print('\tДо следующего лайка ' + str(tl) + ' сек')
+                    time.sleep(tl)
+                #пересчет всех постов пользователя
+            if sf == count_like_posts:
+                print('Было пролайкано ' + str(count_like_posts) + ' постов')
+                print()
+                break
+            sf += 1
         #после того как пользователя отработали то производим запись ланных по лайкам в базу
         #print(like_posts)
         cursor.executemany("""INSERT INTO likes(account ,id_account, link_account, id_post, link_post, time_stamp)
                         VALUES (%(login)s, %(pk)s, %(username)s, %(id_like)s, %(code)s, %(taken_at)s)""", like_posts)
         conn.commit()
-
         #пересчет всех пользователей
         #if ss == 1:
         #    break
         ss += 1
-
         #рандомное количество сна между подписчиками
         t = randint(config.START_SLEEP_TIME_FOLLOWER, config.FINISH_SLEEP_TIME_FOLLOWER)
         print('Жди ' + str(t) + ' сек, выбирается очередная жертва')
         print()
-
         time.sleep(t)
-
     cursor.close()
     conn.close()
